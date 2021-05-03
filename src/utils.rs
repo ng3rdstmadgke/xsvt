@@ -1,17 +1,24 @@
 use std::io;
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
-//use std::io::Write as IoWrite;
-//use std::io::Read as IoRead;
+use std::fs::File;
 use std::fmt::Write as FmtWrite;
 
-pub fn reader() -> BufReader<Box<dyn Read>> {
-    let read: Box<dyn Read> = Box::new(io::stdin());
+pub fn reader(file: Option<&str>) -> BufReader<Box<dyn Read>> {
+    let read: Box<dyn Read> = if let Some(f) = file {
+        Box::new(File::open(f).ok().unwrap())
+    } else {
+        Box::new(io::stdin())
+    };
     return BufReader::new(read);
 }
 
-pub fn writer() -> BufWriter<Box<dyn Write>> {
-    let write: Box<dyn Write> = Box::new(io::stdout());
+pub fn writer(file: Option<&str>) -> BufWriter<Box<dyn Write>> {
+    let write: Box<dyn Write> = if let Some(f) = file {
+        Box::new(File::create(f).ok().unwrap())
+    } else {
+        Box::new(io::stdout())
+    };
     return BufWriter::new(write);
 }
 
