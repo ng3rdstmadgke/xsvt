@@ -22,11 +22,11 @@ pub fn writer(file: Option<&str>) -> BufWriter<Box<dyn Write>> {
     return BufWriter::new(write);
 }
 
-pub fn join<T: std::fmt::Display>(delimiter: char, arr: &[T]) -> String {
+pub fn join<T: std::fmt::Display>(delimiter: &str, arr: &[T]) -> String {
     let mut text = String::new();
     for (i, e) in arr.iter().enumerate() {
         if i > 0 {
-            text.push(delimiter);
+            text.push_str(delimiter);
         }
         write!(text, "{}", e).unwrap();
     }

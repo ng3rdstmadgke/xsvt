@@ -2,6 +2,7 @@ use xsvtools::utils;
 use std::io::prelude::*;
 use std::io::BufRead;
 use clap::{App, Arg};
+use std::process;
 
 
 fn main() {
@@ -27,7 +28,6 @@ fn main() {
             .takes_value(true)
             .value_delimiter(",")
             .default_value("")
-            //.required(true)
         )
         .arg(
             Arg::with_name("FIELDS")
@@ -38,7 +38,12 @@ fn main() {
             .takes_value(true)
             .value_delimiter(",")
             .default_value("")
-            //.required(true)
+        )
+        .arg(
+            Arg::with_name("SHOW_HEADER")
+            .short("S")
+            .long("show-header")
+            .help("show header")
         )
         .arg(
             Arg::with_name("INPUT_FILE")
@@ -68,6 +73,9 @@ fn main() {
     let input_file = matches
         .value_of("INPUT_FILE");
 
+    let show_header = matches
+        .is_present("SHOW_HEADER");
+
     let reader = utils::reader(input_file);
     let mut writer = utils::writer(None);
     let mut field_map = None;
@@ -76,18 +84,27 @@ fn main() {
         let cols: Vec<&str> = line.split(delimiter).collect();
         if ln == 0 {
             field_map = Some(FieldMap::new(&indexes, &fields, &cols));
-            println!("{:?}", field_map);
+            if show_header { // ヘッダを出力して終了
+                cols.iter().enumerate().for_each(|(i, e)| println!("{}: {}", i, e));
+                process::exit(0);
+            }
         }
         if let Some(ref field_map) = field_map {
             for (i, &idx) in field_map.map.iter().enumerate() {
                 if i > 0 {
-                    writer.write(delimiter.as_bytes()).unwrap();
+                    if writer.write(delimiter.as_bytes()).is_err() == true { // broken pipe でエラー終了する対策
+                        process::exit(0);
+                    }
                 }
                 if let Some(value) = cols.get(idx) {
-                    writer.write(value.as_bytes()).unwrap();
+                    if writer.write(value.as_bytes()).is_err() == true {
+                        process::exit(0);
+                    }
                 }
             }
-            writer.write("\n".as_bytes()).unwrap();
+            if writer.write("\n".as_bytes()).is_err() == true {
+                process::exit(0);
+            }
         }
     }
 }
@@ -111,11 +128,11 @@ impl FieldMap {
                 panic!("index {} is not found.", index);
             }
         }
-        for (i, field) in fields.iter().enumerate() {
-            if header.contains(field) {
-                map.push(i);
+        for field in fields.iter() {
+            if let Some(idx) = header.iter().position(|e| e == field) {
+                map.push(idx);
             } else {
-                panic!("field {} is not found.", i);
+                panic!("field {} is not found.", field);
             }
         }
         FieldMap {
