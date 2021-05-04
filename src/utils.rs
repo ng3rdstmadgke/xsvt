@@ -32,3 +32,16 @@ pub fn join<T: std::fmt::Display>(delimiter: &str, arr: &[T]) -> String {
     }
     return text;
 }
+
+pub fn slice(text: &str, start: usize, end: usize) -> String {
+    let mut ret = String::new();
+    for (i, c) in text.chars().enumerate() {
+        if i >= start && i < end {
+            write!(ret, "{}", c).unwrap();
+        } else if i >= end {
+            return ret;
+        }
+    }
+    return ret;
+
+}
