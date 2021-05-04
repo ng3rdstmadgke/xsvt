@@ -51,23 +51,14 @@ fn main() {
                     if writer.write(padding_util.format(&bcols).as_bytes()).is_err() == true {
                         process::exit(0);
                     }
-                    if writer.write("\n".as_bytes()).is_err() == true {
-                        process::exit(0);
-                    }
                 }
                 if writer.write(padding_util.format(&cols).as_bytes()).is_err() == true {
-                    process::exit(0);
-                }
-                if writer.write("\n".as_bytes()).is_err() == true {
                     process::exit(0);
                 }
             }
         } else {
             if let Some(ref padding_util) = padding_util {
                 if writer.write(padding_util.format(&cols).as_bytes()).is_err() == true {
-                    process::exit(0);
-                }
-                if writer.write("\n".as_bytes()).is_err() == true {
                     process::exit(0);
                 }
             }
@@ -80,9 +71,6 @@ fn main() {
                 if writer.write(padding_util.format(&bcols).as_bytes()).is_err() == true {
                     process::exit(0);
                 }
-                if writer.write("\n".as_bytes()).is_err() == true {
-                    process::exit(0);
-                }
             }
         }
     }
@@ -91,6 +79,7 @@ fn main() {
 #[derive(Debug)]
 struct PaddingUtil {
     width_list: Vec<usize>,
+    col_length: usize,
 }
 
 impl PaddingUtil {
@@ -98,6 +87,7 @@ impl PaddingUtil {
         let col_length = if let Some(cols) = rows.get(0) { cols.len() } else { 0 };
         let mut width_list = vec![0; col_length];
         for i in 0..col_length {
+            // カラムごとの値の最大幅を求める。上限は100
             let max_value_length = rows
                 .iter()
                 .map(|cols| {
@@ -109,18 +99,23 @@ impl PaddingUtil {
                 .unwrap();
             width_list[i] = max_value_length;
         }
-        PaddingUtil { width_list }
+        PaddingUtil { width_list, col_length }
     }
 
     fn format(&self, cols: &[String]) -> String {
         let mut ret = String::new();
         for (i, &width) in self.width_list.iter().enumerate() {
             let value: &str = if let Some(v) = cols.get(i) {v} else {&""};
-            let curr_width =  UnicodeWidthStr::width(value);
-            if curr_width < width {
-                let pad_size = width - curr_width;
+            let value_len =  UnicodeWidthStr::width(value);
+            if (i + 1) == self.col_length {
+                // 最終カラムはすべて表示
+                write!(ret, "| {}", value).unwrap();
+            } else if value_len < width {
+                // カラム幅よりも値が短い場合はパディング
+                let pad_size = width - value_len;
                 write!(ret, "| {}{} ", value, " ".repeat(pad_size)).unwrap();
             } else {
+                // カラム幅よりも値が長い場合は値をカラム幅で切る
                 write!(ret, "| ").unwrap();
                 let mut cnt: usize = 0;
                 for c in value.chars() {
@@ -136,6 +131,7 @@ impl PaddingUtil {
                 write!(ret, " ").unwrap();
             }
         }
+        write!(ret, "\n").unwrap();
         return ret;
     }
 }
